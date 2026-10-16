@@ -2,6 +2,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes.health import router as health_router
+
 app = FastAPI(
     title="Schedulix API",
     description="CPU scheduling simulator and background job platform",
@@ -25,8 +27,4 @@ def root() -> dict[str, str]:
     }
 
 
-@app.get("/health")
-def health_check() -> dict[str, str]:
-    return {
-        "status": "healthy",
-    }
+app.include_router(health_router)
