@@ -1,7 +1,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import  DateTime, Integer, JSON, String, Text, func
+from sqlalchemy import DateTime, Integer, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -60,5 +60,27 @@ class Job(Base):
         Text,
         nullable=True,
     )
-    result: Mapped[str | None] = mapped_column(Text, nullable=True)
-    input_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    result: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    input_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    retry_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
+    max_retries: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=2,
+        server_default="2",
+    )
