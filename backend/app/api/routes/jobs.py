@@ -37,6 +37,7 @@ def create_job(
         name=name,
         task_type=task_type,
         priority=payload.priority,
+        input_data=payload.input_data,
     )
 
     db.add(job)
