@@ -1,3 +1,4 @@
+
 import time
 import json
 import logging
@@ -19,9 +20,11 @@ TASK_HANDLERS = {
 
 
 def execute_job(db: Session, job: Job) -> None:
-    """Execute one job and persist its result or failure."""
+    """Execute one job and persist its result, retrying failures when allowed."""
     job.started_at = datetime.now(timezone.utc)
     job.status = "running"
+    job.completed_at = None
+    job.error_message = None
     db.commit()
 
     try:
@@ -46,18 +49,38 @@ def execute_job(db: Session, job: Job) -> None:
         job.result = json.dumps(result)
         job.status = "completed"
         job.error_message = None
+        job.completed_at = datetime.now(timezone.utc)
 
         logger.info("Job %s completed successfully.", job.id)
 
     except Exception as exc:
-        logger.exception("Job %s failed", job.id)
-        job.status = "failed"
-        job.error_message = str(exc)[:2000]
+        error_message = str(exc)[:2000]
         job.result = None
+        job.error_message = error_message
 
-    finally:
-        job.completed_at = datetime.now(timezone.utc)
-        db.commit()
+        if job.retry_count < job.max_retries:
+            job.retry_count += 1
+            job.status = "queued"
+            job.completed_at = None
+
+            logger.warning(
+                "Job %s failed. Scheduling retry %s of %s. Error: %s",
+                job.id,
+                job.retry_count,
+                job.max_retries,
+                error_message,
+            )
+        else:
+            job.status = "failed"
+            job.completed_at = datetime.now(timezone.utc)
+
+            logger.error(
+                "Job %s exhausted all %s retries and failed.",
+                job.id,
+                job.max_retries,
+            )
+
+    db.commit()
 
 
 def process_next_job() -> bool:
@@ -81,6 +104,7 @@ def process_next_job() -> bool:
         execute_job(db, job)
         return True
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
@@ -94,4 +118,3 @@ if __name__ == "__main__":
                 time.sleep(2)
     except KeyboardInterrupt:
         logger.info("Schedulix worker stopped.")
-

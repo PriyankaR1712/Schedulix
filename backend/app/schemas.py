@@ -13,6 +13,7 @@ class JobCreate(BaseModel):
 
 
 
+
 class JobResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -27,3 +28,5 @@ class JobResponse(BaseModel):
     error_message: str | None
     input_data: dict[str, Any] | None
     result: str | None
+    retry_count: int
+    max_retries: int
