@@ -83,8 +83,9 @@ def execute_job(db: Session, job: Job) -> None:
     db.commit()
 
 
+
 def process_next_job() -> bool:
-    """Process one queued job. Return False if the queue is empty."""
+    """Claim and process one queued job. Return False if the queue is empty."""
     with SessionLocal() as db:
         job = db.scalar(
             select(Job)
@@ -97,6 +98,22 @@ def process_next_job() -> bool:
             .limit(1)
             .with_for_update(skip_locked=True)
         )
+
+        if job is None:
+            return False
+
+        # Claim the job before releasing the database row lock.
+        job.status = "running"
+        job.started_at = datetime.now(timezone.utc)
+        job.completed_at = None
+        job.error_message = None
+        db.commit()
+
+        # execute_job normally sets running itself; it can safely
+        # continue from this claimed state.
+        execute_job(db, job)
+        return True
+
 
         if job is None:
             return False

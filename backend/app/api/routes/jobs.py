@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Job
 from app.schemas import JobCreate, JobResponse
+from datetime import datetime, timezone
 
+from sqlalchemy import select
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 
@@ -71,3 +73,33 @@ def get_job(
         )
 
     return job
+
+@router.post("/{job_id}/cancel", response_model=JobResponse)
+def cancel_job(job_id: int, db: Session = Depends(get_db)) -> Job:
+    """Cancel a job that has not started running."""
+    job = db.scalar(
+        select(Job)
+        .where(Job.id == job_id)
+        .with_for_update()
+    )
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
+    if job.status != "queued":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot cancel a job with status '{job.status}'.",
+        )
+
+    job.status = "cancelled"
+    job.completed_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(job)
+
+    return job
+
