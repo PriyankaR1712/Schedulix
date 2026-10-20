@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
+from fastapi import Query
 from app.db import get_db
 from app.models import Job
 from app.schemas import JobCreate, JobResponse
@@ -49,13 +49,48 @@ def create_job(
 
     return job
 
+
+
+
+
 @router.get("/", response_model=list[JobResponse])
 def list_jobs(
+    status_filter: str | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[Job]:
+    query = db.query(Job)
+
+    if status_filter is not None:
+        allowed_statuses = {
+            "queued",
+            "running",
+            "completed",
+            "failed",
+            "cancelled",
+        }
+
+        status_filter = status_filter.strip().lower()
+
+        if status_filter not in allowed_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Invalid status. Choose queued, running, completed, "
+                    "failed, or cancelled."
+                ),
+            )
+
+        query = query.filter(Job.status == status_filter)
+
     return list(
-        db.query(Job)
-        .order_by(Job.created_at.desc(), Job.id.desc())
+        query.order_by(
+            Job.created_at.desc(),
+            Job.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 
