@@ -38,6 +38,7 @@ def create_job(
         task_type=task_type,
         priority=payload.priority,
         input_data=payload.input_data,
+        max_retries=payload.max_retries,
     )
 
     db.add(job)

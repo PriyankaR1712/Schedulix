@@ -10,6 +10,7 @@ class JobCreate(BaseModel):
     task_type: str = Field(min_length=1, max_length=50)
     priority: int = Field(default=3, ge=1, le=5)
     input_data: dict[str, Any] | None = None
+    max_retries: int = Field(default=2, ge=0, le=5)
 
 
 
