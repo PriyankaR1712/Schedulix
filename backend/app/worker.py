@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
-from app.models import Job
+from app.models import Job, JobAttempt
 from app.tasks.handlers import generate_report, summarize_csv
 
 logger = logging.getLogger(__name__)
@@ -19,13 +19,24 @@ TASK_HANDLERS = {
 }
 
 
+
 def execute_job(db: Session, job: Job) -> None:
-    """Execute one job and persist its result, retrying failures when allowed."""
-    job.started_at = datetime.now(timezone.utc)
+    """Execute a job, record its attempt, and retry failures when allowed."""
+    attempt = JobAttempt(
+        job_id=job.id,
+        attempt_number=job.retry_count + 1,
+        status="running",
+        started_at=datetime.now(timezone.utc),
+    )
+
+    db.add(attempt)
+
+    job.started_at = attempt.started_at
     job.status = "running"
     job.completed_at = None
     job.error_message = None
     db.commit()
+    db.refresh(attempt)
 
     try:
         handler = TASK_HANDLERS.get(job.task_type)
@@ -46,15 +57,34 @@ def execute_job(db: Session, job: Job) -> None:
         else:
             result = handler()
 
-        job.result = json.dumps(result)
+        result_json = json.dumps(result)
+        finished_at = datetime.now(timezone.utc)
+
+        attempt.status = "completed"
+        attempt.completed_at = finished_at
+        attempt.result = result_json
+        attempt.error_message = None
+
+        job.result = result_json
         job.status = "completed"
         job.error_message = None
-        job.completed_at = datetime.now(timezone.utc)
+        job.completed_at = finished_at
 
-        logger.info("Job %s completed successfully.", job.id)
+        logger.info(
+            "Job %s attempt %s completed successfully.",
+            job.id,
+            attempt.attempt_number,
+        )
 
     except Exception as exc:
         error_message = str(exc)[:2000]
+        finished_at = datetime.now(timezone.utc)
+
+        attempt.status = "failed"
+        attempt.completed_at = finished_at
+        attempt.error_message = error_message
+        attempt.result = None
+
         job.result = None
         job.error_message = error_message
 
@@ -64,15 +94,17 @@ def execute_job(db: Session, job: Job) -> None:
             job.completed_at = None
 
             logger.warning(
-                "Job %s failed. Scheduling retry %s of %s. Error: %s",
+                "Job %s attempt %s failed. Scheduling retry %s of %s. "
+                "Error: %s",
                 job.id,
+                attempt.attempt_number,
                 job.retry_count,
                 job.max_retries,
                 error_message,
             )
         else:
             job.status = "failed"
-            job.completed_at = datetime.now(timezone.utc)
+            job.completed_at = finished_at
 
             logger.error(
                 "Job %s exhausted all %s retries and failed.",
@@ -81,6 +113,7 @@ def execute_job(db: Session, job: Job) -> None:
             )
 
     db.commit()
+
 
 
 

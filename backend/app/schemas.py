@@ -31,3 +31,15 @@ class JobResponse(BaseModel):
     result: str | None
     retry_count: int
     max_retries: int
+
+class JobAttemptResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    job_id: int
+    attempt_number: int
+    status: str
+    started_at: datetime
+    completed_at: datetime | None
+    error_message: str | None
+    result: str | None

@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi import Query
 from app.db import get_db
-from app.models import Job
-from app.schemas import JobCreate, JobResponse
+from app.models import Job, JobAttempt
+from app.schemas import JobAttemptResponse, JobCreate, JobResponse
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -137,4 +137,30 @@ def cancel_job(job_id: int, db: Session = Depends(get_db)) -> Job:
     db.refresh(job)
 
     return job
+
+
+@router.get(
+    "/{job_id}/attempts",
+    response_model=list[JobAttemptResponse],
+)
+def list_job_attempts(
+    job_id: int,
+    db: Session = Depends(get_db),
+) -> list[JobAttempt]:
+    """Return execution attempts for a job in attempt order."""
+    job = db.get(Job, job_id)
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found.",
+        )
+
+    attempts = db.scalars(
+        select(JobAttempt)
+        .where(JobAttempt.job_id == job_id)
+        .order_by(JobAttempt.attempt_number.asc())
+    ).all()
+
+    return list(attempts)
 
