@@ -334,11 +334,7 @@ select:focus-visible {
   text-align: center;
 }
 
-@media (min-width: 1100px) {
-  .stats-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-}
+
 
 @media (max-width: 700px) {
   .navbar {
@@ -649,5 +645,167 @@ select:focus-visible {
   .form-feedback,
   .form-actions {
     grid-column: 1;
+  }
+}
+
+/* Compatibility styles for the current App.tsx */
+
+.topbar {
+  min-height: 76px;
+  padding: 16px 6%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #202333;
+  background: rgba(10, 12, 21, 0.82);
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: white;
+  background: linear-gradient(135deg, #8177ff, #5146c7);
+  font-weight: 800;
+}
+
+.brand h2,
+.brand p {
+  margin: 0;
+}
+
+.brand p {
+  margin-top: 5px;
+  color: #858ba3;
+  font-size: 11px;
+}
+
+.api-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a8aec2;
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6ee7b7;
+}
+
+.stat-card p {
+  margin: 0;
+  color: #989eb4;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stat-card h2 {
+  margin: 13px 0;
+  color: #f4f4ff;
+  font-size: 32px;
+  font-weight: 750;
+}
+
+.stat-card span {
+  margin-top: 0;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.status-filter {
+  max-width: 180px;
+  padding: 10px 32px 10px 12px;
+  border: 1px solid #33384c;
+  border-radius: 9px;
+  color: #e6e8f4;
+  background: #191d2b;
+  cursor: pointer;
+}
+
+.detail-section {
+  margin-top: 28px;
+}
+
+.detail-section h3 {
+  margin-bottom: 14px;
+  color: #f1f2fc;
+  font-size: 16px;
+}
+
+.result-output {
+  overflow-x: auto;
+  padding: 16px;
+  border: 1px solid #292e42;
+  border-radius: 9px;
+  color: #d6d9ec;
+  background: #090b12;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.attempt-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.attempt-card p {
+  color: #939ab1;
+  font-size: 12px;
+}
+
+.cancel-job-button {
+  padding: 7px 11px;
+  border: 1px solid #75404b;
+  border-radius: 7px;
+  background: #35212a;
+  color: #ff9ba8;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancel-job-button:hover:not(:disabled) {
+  background: #512833;
+  border-color: #b65365;
+}
+
+.cancel-job-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (min-width: 1100px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .topbar {
+    padding: 14px 5%;
+  }
+
+  .api-indicator {
+    font-size: 10px;
+  }
+
+  .status-filter {
+    max-width: 100%;
+  }
+
+  .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
