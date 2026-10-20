@@ -44,7 +44,15 @@ function App() {
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [jobName, setJobName] = useState("");
+  const [taskType, setTaskType] = useState("report");
+  const [priority, setPriority] = useState(3);
+  const [maxRetries, setMaxRetries] = useState(2);
+  const [csvFilePath, setCsvFilePath] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createSuccess, setCreateSuccess] = useState("");
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [attempts, setAttempts] = useState<JobAttempt[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -119,6 +127,66 @@ function App() {
       setDetailsLoading(false);
     }
   };
+  
+const handleCreateJob = async (
+  event: React.FormEvent<HTMLFormElement>,
+) => {
+  event.preventDefault();
+
+  setCreating(true);
+  setCreateError("");
+  setCreateSuccess("");
+
+  const inputData =
+    taskType === "csv_summary"
+      ? { file_path: csvFilePath.trim() }
+      : {};
+
+  try {
+    const response = await fetch(`${API_BASE}/jobs/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: jobName.trim(),
+        task_type: taskType,
+        priority,
+        max_retries: maxRetries,
+        input_data: inputData,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const message =
+        typeof data.detail === "string"
+          ? data.detail
+          : "Could not create the job. Check the submitted values.";
+
+      throw new Error(message);
+    }
+
+    setCreateSuccess(`Job #${data.id} was created successfully!`);
+    setJobName("");
+    setTaskType("report");
+    setPriority(3);
+    setMaxRetries(2);
+    setCsvFilePath("");
+    setShowCreateForm(false);
+
+    await fetchJobs();
+  } catch (err) {
+    setCreateError(
+      err instanceof Error
+        ? err.message
+        : "Could not connect to the Schedulix API.",
+    );
+  } finally {
+    setCreating(false);
+  }
+};
 
   useEffect(() => {
     void fetchJobs();
@@ -144,23 +212,138 @@ function App() {
       </nav>
 
       <section className="dashboard">
-        <div className="dashboard-heading">
-          <div>
-            <p className="card-label">BACKGROUND JOB ENGINE</p>
-            <h1>Job monitoring</h1>
-            <p className="dashboard-description">
-              Monitor executions, retries, and failures from your live API.
-            </p>
-          </div>
+        
+<div className="dashboard-heading">
+  <div>
+    <p className="card-label">BACKGROUND JOB ENGINE</p>
+    <h1>Job monitoring</h1>
+    <p className="dashboard-description">
+      Monitor executions, retries, and failures from your live API.
+    </p>
+  </div>
 
-          <button
-            className="refresh-button"
-            onClick={() => void fetchJobs()}
-            disabled={refreshing}
-          >
-            {refreshing ? "Refreshing..." : "↻ Refresh"}
-          </button>
-        </div>
+  <div className="dashboard-actions">
+    <button
+      className="refresh-button"
+      onClick={() => setShowCreateForm((visible) => !visible)}
+    >
+      {showCreateForm ? "Close form" : "+ Create job"}
+    </button>
+
+    <button
+      className="refresh-button"
+      onClick={() => void fetchJobs()}
+      disabled={refreshing}
+    >
+      {refreshing ? "Refreshing..." : "↻ Refresh"}
+    </button>
+  </div>
+</div>
+
+{createSuccess && (
+  <div className="success-message">{createSuccess}</div>
+)}
+
+{showCreateForm && (
+  <section className="jobs-panel create-job-panel">
+    <div className="jobs-toolbar">
+      <div>
+        <h2>Create a background job</h2>
+        <p>Submit a task to the Schedulix worker queue.</p>
+      </div>
+    </div>
+
+    <form className="create-job-form" onSubmit={handleCreateJob}>
+      <label>
+        Job name
+        <input
+          type="text"
+          value={jobName}
+          onChange={(event) => setJobName(event.target.value)}
+          placeholder="e.g. Generate weekly report"
+          maxLength={120}
+          required
+        />
+      </label>
+
+      <label>
+        Task type
+        <select
+          value={taskType}
+          onChange={(event) => setTaskType(event.target.value)}
+        >
+          <option value="report">Generate report</option>
+          <option value="csv_summary">Summarize CSV</option>
+        </select>
+      </label>
+
+      {taskType === "csv_summary" && (
+        <label className="full-width-field">
+          CSV file path on the backend machine
+          <input
+            type="text"
+            value={csvFilePath}
+            onChange={(event) => setCsvFilePath(event.target.value)}
+            placeholder="C:/Users/PRIYANKA/Documents/Schedulix/sample.csv"
+            required
+          />
+        </label>
+      )}
+
+      <label>
+        Priority
+        <select
+          value={priority}
+          onChange={(event) => setPriority(Number(event.target.value))}
+        >
+          <option value={1}>1 — Highest</option>
+          <option value={2}>2 — High</option>
+          <option value={3}>3 — Normal</option>
+          <option value={4}>4 — Low</option>
+          <option value={5}>5 — Lowest</option>
+        </select>
+      </label>
+
+      <label>
+        Maximum retries
+        <select
+          value={maxRetries}
+          onChange={(event) => setMaxRetries(Number(event.target.value))}
+        >
+          <option value={0}>0 — No retries</option>
+          <option value={1}>1 retry</option>
+          <option value={2}>2 retries</option>
+          <option value={3}>3 retries</option>
+          <option value={4}>4 retries</option>
+          <option value={5}>5 retries</option>
+        </select>
+      </label>
+
+      {createError && (
+        <div className="error-message form-feedback">{createError}</div>
+      )}
+
+      <div className="form-actions">
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => setShowCreateForm(false)}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          className="submit-button"
+          disabled={creating}
+        >
+          {creating ? "Creating..." : "Create job"}
+        </button>
+      </div>
+    </form>
+  </section>
+)}
+
 
         <div className="stats-grid">
           <article className="stat-card">
