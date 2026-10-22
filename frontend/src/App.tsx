@@ -275,8 +275,16 @@ function App() {
   };
 
   useEffect(() => {
+  void fetchJobs();
+
+  const intervalId = window.setInterval(() => {
     void fetchJobs();
-  }, [fetchJobs]);
+  }, 5000);
+
+  return () => {
+    window.clearInterval(intervalId);
+  };
+}, [fetchJobs]);
 
   const totalJobs = allJobs.length;
 
